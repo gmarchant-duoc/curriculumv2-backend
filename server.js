@@ -1,10 +1,21 @@
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+//Nuevo por BD
+const connectDB = require('./config/database');
+
 const curriculumRoutes = require('./routes/curriculum.routes');
 
+//nuevo por BD
+require('dotenv').config();
+
 const app = express();
-const PORT = 3001;
+//const PORT = 3001;
+//Modificado por BD
+const PORT = process.env.PORT || 3001;
+
+// Conectar a MongoDB
+connectDB();
 
 // Middlewares
 app.use(cors({

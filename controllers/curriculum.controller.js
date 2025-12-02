@@ -1,91 +1,197 @@
-let curriculum = require('../data/curriculum.data');
+// controllers/curriculum.controller.js
 
-// Obtener todos los datos del currículum
-exports.obtenerCurriculum = (req, res) => {
-  res.json(curriculum);
+const InformacionPersonal = require('../models/InformacionPersonal');
+const Experiencia = require('../models/Experiencia');
+
+// Obtener currículum completo
+exports.obtenerCurriculum = async (req, res) => {
+  try {
+    const info = await InformacionPersonal.findOne();
+    const experiencias = await Experiencia.find().sort({ createdAt: -1 });
+    
+    res.json({
+      ...info?._doc,
+      experiencias
+    });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ 
+      mensaje: 'Error al obtener el currículum',
+      error: error.message 
+    });
+  }
 };
 
 // Obtener solo información personal
-exports.obtenerInfoPersonal = (req, res) => {
-  const { nombre, titulo, ubicacion, descripcion } = curriculum;
-  res.json({ nombre, titulo, ubicacion, descripcion });
-};
-
-// Obtener todas las experiencias
-exports.obtenerExperiencias = (req, res) => {
-  res.json(curriculum.experiencias);
-};
-
-// Obtener una experiencia por ID
-exports.obtenerExperienciaPorId = (req, res) => {
-  const id = parseInt(req.params.id);
-  const experiencia = curriculum.experiencias.find(exp => exp.id === id);
-  
-  if (experiencia) {
-    res.json(experiencia);
-  } else {
-    res.status(404).json({ mensaje: 'Experiencia no encontrada' });
-  }
-};
-
-// Crear nueva experiencia
-exports.crearExperiencia = (req, res) => {
-  const nuevaExperiencia = {
-    id: curriculum.experiencias.length + 1,
-    puesto: req.body.puesto,
-    empresa: req.body.empresa,
-    ubicacion: req.body.ubicacion,
-    periodo: req.body.periodo,
-    responsabilidades: req.body.responsabilidades || []
-  };
-  
-  curriculum.experiencias.push(nuevaExperiencia);
-  res.status(201).json(nuevaExperiencia);
-};
-
-// Actualizar experiencia existente
-exports.actualizarExperiencia = (req, res) => {
-  const id = parseInt(req.params.id);
-  const index = curriculum.experiencias.findIndex(exp => exp.id === id);
-  
-  if (index !== -1) {
-    curriculum.experiencias[index] = {
-      ...curriculum.experiencias[index],
-      ...req.body,
-      id: id
-    };
-    res.json(curriculum.experiencias[index]);
-  } else {
-    res.status(404).json({ mensaje: 'Experiencia no encontrada' });
-  }
-};
-
-// Eliminar experiencia
-exports.eliminarExperiencia = (req, res) => {
-  const id = parseInt(req.params.id);
-  const index = curriculum.experiencias.findIndex(exp => exp.id === id);
-  
-  if (index !== -1) {
-    curriculum.experiencias.splice(index, 1);
-    res.json({ mensaje: 'Experiencia eliminada correctamente' });
-  } else {
-    res.status(404).json({ mensaje: 'Experiencia no encontrada' });
+exports.obtenerInfoPersonal = async (req, res) => {
+  try {
+    const info = await InformacionPersonal.findOne();
+    
+    if (!info) {
+      return res.status(404).json({ 
+        mensaje: 'No se encontró información personal' 
+      });
+    }
+    
+    res.json(info);
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ 
+      mensaje: 'Error al obtener información personal',
+      error: error.message 
+    });
   }
 };
 
 // Actualizar información personal
-exports.actualizarInfoPersonal = (req, res) => {
-  const { nombre, titulo, ubicacion, descripcion } = req.body;
-  
-  if (nombre) curriculum.nombre = nombre;
-  if (titulo) curriculum.titulo = titulo;
-  if (ubicacion) curriculum.ubicacion = ubicacion;
-  if (descripcion) curriculum.descripcion = descripcion;
-  
-  res.json({ 
-    nombre: curriculum.nombre, 
-    titulo: curriculum.titulo, 
-    ubicacion: curriculum.ubicacion, 
-    descripcion: curriculum.descripcion 
-  });
+exports.actualizarInfoPersonal = async (req, res) => {
+  try {
+    const { nombre, titulo, ubicacion, descripcion } = req.body;
+    
+    let info = await InformacionPersonal.findOne();
+    
+    if (!info) {
+      // Si no existe, crear una nueva
+      info = new InformacionPersonal({
+        nombre,
+        titulo,
+        ubicacion,
+        descripcion
+      });
+    } else {
+      // Si existe, actualizar
+      info.nombre = nombre || info.nombre;
+      info.titulo = titulo || info.titulo;
+      info.ubicacion = ubicacion || info.ubicacion;
+      info.descripcion = descripcion || info.descripcion;
+    }
+    
+    await info.save();
+    res.json(info);
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ 
+      mensaje: 'Error al actualizar información personal',
+      error: error.message 
+    });
+  }
+};
+
+// Obtener todas las experiencias
+exports.obtenerExperiencias = async (req, res) => {
+  try {
+    const experiencias = await Experiencia.find().sort({ createdAt: -1 });
+    res.json(experiencias);
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ 
+      mensaje: 'Error al obtener experiencias',
+      error: error.message 
+    });
+  }
+};
+
+// Obtener una experiencia por ID
+exports.obtenerExperienciaPorId = async (req, res) => {
+  try {
+    const experiencia = await Experiencia.findById(req.params.id);
+    
+    if (!experiencia) {
+      return res.status(404).json({ 
+        mensaje: 'Experiencia no encontrada' 
+      });
+    }
+    
+    res.json(experiencia);
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ 
+      mensaje: 'Error al obtener experiencia',
+      error: error.message 
+    });
+  }
+};
+
+// Crear nueva experiencia
+exports.crearExperiencia = async (req, res) => {
+  try {
+    const { puesto, empresa, ubicacion, periodo, responsabilidades } = req.body;
+    
+    const nuevaExperiencia = new Experiencia({
+      puesto,
+      empresa,
+      ubicacion,
+      periodo,
+      responsabilidades: responsabilidades || []
+    });
+    
+    await nuevaExperiencia.save();
+    res.status(201).json(nuevaExperiencia);
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ 
+      mensaje: 'Error al crear experiencia',
+      error: error.message 
+    });
+  }
+};
+
+// Actualizar experiencia existente
+exports.actualizarExperiencia = async (req, res) => {
+  try {
+    const { puesto, empresa, ubicacion, periodo, responsabilidades } = req.body;
+    
+    const experiencia = await Experiencia.findByIdAndUpdate(
+      req.params.id,
+      {
+        puesto,
+        empresa,
+        ubicacion,
+        periodo,
+        responsabilidades
+      },
+      { 
+        new: true,           // Retorna el documento actualizado
+        runValidators: true  // Ejecuta las validaciones del schema
+      }
+    );
+    
+    if (!experiencia) {
+      return res.status(404).json({ 
+        mensaje: 'Experiencia no encontrada' 
+      });
+    }
+    
+    res.json(experiencia);
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ 
+      mensaje: 'Error al actualizar experiencia',
+      error: error.message 
+    });
+  }
+};
+
+// Eliminar experiencia
+exports.eliminarExperiencia = async (req, res) => {
+  try {
+    const experiencia = await Experiencia.findByIdAndDelete(req.params.id);
+    
+    if (!experiencia) {
+      return res.status(404).json({ 
+        mensaje: 'Experiencia no encontrada' 
+      });
+    }
+    
+    res.json({ 
+      mensaje: 'Experiencia eliminada correctamente',
+      experiencia
+    });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ 
+      mensaje: 'Error al eliminar experiencia',
+      error: error.message 
+    });
+  }
 };
