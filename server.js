@@ -18,9 +18,14 @@ const PORT = process.env.PORT || 3001;
 connectDB();
 
 // Middlewares
-app.use(cors({
+/*app.use(cors({
   origin: 'http://localhost:3000'  // URL del frontend React
+}));*/
+
+app.use(cors({
+  origin: ['http://localhost:3000', 'https://curriculumv2-production.up.railway.app']
 }));
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
